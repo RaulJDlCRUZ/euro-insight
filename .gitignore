@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtualenv
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Airflow
+airflow/logs/
+logs/
+
+# Datos
+data/
+*.csv
+*.parquet
+*.json
+*.orc
+
+# MinIO
+minio-data/
+
+# Spark
+spark-data/
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Variables entorno
+.env
+
+# Docker volumes
+docker-volumes/
+
+# Archivos temporales
+tmp/
+temp/
+
+# ZIP
+*.zip
+
+# Outputs
+output/
+artifacts/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
