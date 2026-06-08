@@ -15,7 +15,7 @@ spark = (SparkSession.builder
     .config("spark.sql.catalog.spark_catalog",
             "org.apache.spark.sql.delta.catalog.DeltaCatalog")
 
-    # ⚠️ Usamos bucket bronze directamente
+    # Usamos bucket bronze directamente
     .config("spark.sql.warehouse.dir", "s3a://bronze/warehouse")
 
     # Config MinIO
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS bronze.sorteos_raw (
 )
 USING DELTA
 LOCATION '{path_sorteos}'
-PARTITIONED BY (source, anio, mes)
+PARTITIONED BY (source)
 """
 
 create_table_if_not_exists(path_sorteos, create_sql_sorteos)
