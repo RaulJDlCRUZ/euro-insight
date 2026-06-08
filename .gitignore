@@ -62,3 +62,6 @@ htmlcov/
 .terraform/
 *.tfstate
 *.tfstate.*
+
+infrastructure/spark-apps/metastore_db/*
+infrastructure/spark-apps/*.log
