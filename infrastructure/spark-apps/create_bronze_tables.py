@@ -4,11 +4,11 @@ from delta import DeltaTable
 # ----------------------------
 # Crear sesión Spark (basado en tu script)
 # ----------------------------
-spark = (SparkSession.builder 
-    .appName("CreateBronzeTables") 
-    .master("spark://spark-master:7077") 
-    .config("spark.submit.deployMode", "client") 
-    
+spark = (SparkSession.builder
+    .appName("CreateBronzeTables")
+    .master("spark://spark-master:7077")
+    .config("spark.submit.deployMode", "client")
+
     # Delta
     .config("spark.sql.extensions",
             "io.delta.sql.DeltaSparkSessionExtension")
@@ -19,12 +19,12 @@ spark = (SparkSession.builder
     .config("spark.sql.warehouse.dir", "s3a://bronze/warehouse")
 
     # Config MinIO
-    .config("spark.hadoop.fs.s3a.access.key", "minioadmin") 
-    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin123") 
-    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") 
-    .config("spark.hadoop.fs.s3a.path.style.access", "true") 
-    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") 
-    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")   
+    .config("spark.hadoop.fs.s3a.access.key", "minioadmin")
+    .config("spark.hadoop.fs.s3a.secret.key", "minioadmin123")
+    .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000")
+    .config("spark.hadoop.fs.s3a.path.style.access", "true")
+    .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
+    .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
     .config(
         "spark.hadoop.fs.s3a.aws.credentials.provider",
         "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
@@ -125,6 +125,29 @@ PARTITIONED BY (ingestion_date)
 """
 
 create_table_if_not_exists(path_scraping, create_sql_scraping)
+
+
+# ============================
+# 4. bronze.apuestas_raw
+# ============================
+
+path_apuestas = "s3a://bronze/apuestas_raw"
+
+create_sql_apuestas = f"""
+CREATE TABLE IF NOT EXISTS bronze.apuestas_raw (
+    raw_json        STRING,
+    kafka_offset    BIGINT,
+    kafka_partition INT,
+    ingestion_ts    TIMESTAMP,
+    ingestion_date  DATE,
+    pipeline_run_id STRING
+)
+USING DELTA
+LOCATION '{path_apuestas}'
+PARTITIONED BY (ingestion_date)
+"""
+
+create_table_if_not_exists(path_apuestas, create_sql_apuestas)
 
 
 # ----------------------------
