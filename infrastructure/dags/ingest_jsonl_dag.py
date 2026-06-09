@@ -22,7 +22,6 @@ my_bash_command = """
     --conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" \
     /opt/project/scripts/ingest_selae_json.py \
     --input_path /opt/project/data/out/euromillones_historico_completo.jsonl \
-    --source selae_scraping \
     --pipeline_run_id {{ dag.dag_id }}_{{ ts_nodash }}
 """
 

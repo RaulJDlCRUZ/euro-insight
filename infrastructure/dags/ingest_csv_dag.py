@@ -29,8 +29,8 @@ with DAG(
         --conf "spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider" \
         --conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension" \
         --conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" \
-        /opt/spark-apps/ingest_sorteos_raw.py \
-        --input_path data/miguelminambres/Euromillones-Draw-Data.csv \
+        /opt/project/scripts/ingest_sorteos_raw.py \
+        --input_path /opt/project/data/miguelminambres/Euromillones-Draw-Data.csv \
         --source kaggle_es \
         --pipeline_run_id {{ dag.dag_id }}_{{ ts_nodash }}
         """
@@ -50,9 +50,9 @@ with DAG(
         --conf "spark.hadoop.fs.s3a.connection.ssl.enabled=false" \
         --conf "spark.hadoop.fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider" \
         --conf "spark.sql.extensions=io.delta.sql.DeltaSparkSessionExtension" \
-        --conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" \/opt/spark-apps/ingest_sorteos_raw.py \
-        /opt/spark-apps/ingest_sorteos_raw.py \
-        --input_path data/sihantao0626/euromillions.csv \
+        --conf "spark.sql.catalog.spark_catalog=org.apache.spark.sql.delta.catalog.DeltaCatalog" \
+        /opt/project/scripts/ingest_sorteos_raw.py \
+        --input_path /opt/project/data/sihantao0626/euromillions.csv \
         --source kaggle_uk \
         --pipeline_run_id {{ dag.dag_id }}_{{ ts_nodash }}
         """
