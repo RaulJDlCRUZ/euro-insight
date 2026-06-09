@@ -2,7 +2,7 @@ from pyspark.sql import SparkSession
 from delta import DeltaTable
 
 # ----------------------------
-# Crear sesión Spark (basado en tu script)
+# Crear sesión Spark (Bronze Layer)
 # ----------------------------
 spark = (SparkSession.builder
     .appName("CreateBronzeTables")
