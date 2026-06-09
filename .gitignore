@@ -25,6 +25,7 @@ data/
 *.csv
 *.parquet
 *.json
+*.jsonl
 *.orc
 
 # MinIO
