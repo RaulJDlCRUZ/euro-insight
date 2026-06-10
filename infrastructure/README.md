@@ -95,3 +95,5 @@ docker exec -it minio-mc mc rm -r --force local/bronze
 
 docker exec -it minio-mc mc mb local/bronze
 ```
+
+> Aplica igual para `local/silver` y `local/gold`.
