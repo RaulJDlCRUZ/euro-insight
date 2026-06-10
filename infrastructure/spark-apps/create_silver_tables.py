@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS silver.sorteos_validados (
     estrella_2      INT,
     recaudacion     DECIMAL(14,2),
     pais_origen     STRING,
-    source_run_id   STRING,
+    pipeline_run_id   STRING,
     validated_at    TIMESTAMP,
     anio            INT,
     mes             INT
@@ -126,13 +126,16 @@ path_q1 = "s3a://silver/sorteos_quarantine"
 
 sql_q1 = f"""
 CREATE TABLE IF NOT EXISTS silver.sorteos_quarantine (
-    raw_record      STRING,
-    reason          STRING,
-    source_run_id   STRING,
-    ingestion_ts    TIMESTAMP
+    raw_record         STRING,
+    source             STRING,
+    validation_error   STRING,
+    pipeline_run_id    STRING,
+    ingestion_ts       TIMESTAMP,
+    quarantined_at     TIMESTAMP
 )
 USING DELTA
 LOCATION '{path_q1}'
+PARTITIONED BY (source)
 """
 
 create_table_if_not_exists(path_q1, sql_q1)
@@ -147,7 +150,7 @@ sql_q2 = f"""
 CREATE TABLE IF NOT EXISTS silver.apuestas_quarantine (
     raw_record      STRING,
     reason          STRING,
-    source_run_id   STRING,
+    pipeline_run_id   STRING,
     ingestion_ts    TIMESTAMP
 )
 USING DELTA

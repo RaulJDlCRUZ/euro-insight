@@ -1,12 +1,12 @@
 import argparse
+import re
 
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     lit,
     current_timestamp,
     col,
-    split,
-    regexp_extract
+    concat_ws
 )
 
 TABLE_PATH = "s3a://bronze/sorteos_raw"
@@ -86,6 +86,25 @@ def create_spark():
     )
 
 
+def _clean_uk_multiline(input_path: str) -> str:
+    """
+    Elimina los saltos de línea espurios ('\\nRolled') del CSV de UK
+    que Spark no absorbe por estar fuera de campos quoted.
+    Escribe el fichero limpio junto al original y devuelve su path.
+    """
+    clean_path = input_path.replace(".csv", "_cleaned.csv")
+
+    with open(input_path, "r", encoding="utf-8") as f:
+        raw = f.read()
+
+    cleaned = re.sub(r'\n[ \t]*Rolled', '', raw, flags=re.IGNORECASE)
+
+    with open(clean_path, "w", encoding="utf-8") as f:
+        f.write(cleaned)
+
+    return clean_path
+
+
 # ----------------------------
 # Ingestión
 # ----------------------------
@@ -102,24 +121,39 @@ def ingest_sorteos_raw(
             f"Source inválido: {source}"
         )
 
-    # Leer fichero tal cual
-    df = spark.read.text(input_path)
+    if source == "kaggle_uk":
+        input_path = _clean_uk_multiline(input_path)
 
-    first_row = df.first()
+    # -----------------------------------
+    # Leer CSV respetando registros multilínea
+    # -----------------------------------
+    df = (
+        spark.read
+        .option("header", "true")
+        .option("multiLine", "true")
+        .option("quote", '"')
+        .option("escape", '"')
+        .csv(input_path)
+    )
 
-    if first_row is None:
+    if df.rdd.isEmpty():
         raise ValueError(
             f"El fichero está vacío: {input_path}"
         )
 
-    header = first_row["value"]
-
-    # Eliminar cabecera
+    # -----------------------------------
+    # Reconstruir el registro lógico
+    # -----------------------------------
+    # Se concatenan las columnas originales en el orden
+    # en que aparecen en el CSV para mantener un payload
+    # "raw" homogéneo.
     df_raw = (
         df
-        .filter(col("value") != header)
         .select(
-            col("value").alias("raw_content")
+            concat_ws(
+                ",",
+                *[col(c).cast("string") for c in df.columns]
+            ).alias("raw_content")
         )
     )
 
