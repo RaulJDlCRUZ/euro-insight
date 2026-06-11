@@ -5,9 +5,9 @@ x-airflow-common:
   # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
   # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
   # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.0.6}
-  build: 
+  build:
     context: .
-    dockerfile: dockerfile-airflow 
+    dockerfile: dockerfile-airflow
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -55,7 +55,7 @@ services:
     build:
       context: .
       dockerfile: dockerfile-spark
-    image: spark     
+    image: spark
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -67,21 +67,21 @@ services:
       - SPARK_CONF_spark.hadoop.fs.s3a.path.style.access=true
       - SPARK_CONF_spark.hadoop.fs.s3a.connection.ssl.enabled=false
       - SPARK_CONF_spark.hadoop.fs.s3a.access.key=minioadmin
-      - SPARK_CONF_spark.hadoop.fs.s3a.secret.key=minioadmin123      
+      - SPARK_CONF_spark.hadoop.fs.s3a.secret.key=minioadmin123
       # Catálogo en memoria (opcional: es el default si no hay Hive)
       - SPARK_CONF_spark.sql.catalogImplementation=in-memory
       # (opcional) warehouse en S3A para `saveAsTable` no-hive
-      #- SPARK_CONF_spark.sql.warehouse.dir=s3a://spark/warehouse  
+      #- SPARK_CONF_spark.sql.warehouse.dir=s3a://spark/warehouse
       # - PYSPARK_PYTHON=/usr/bin/python3
       # - PYSPARK_DRIVER_PYTHON=/usr/bin/python3
     command:  >
-      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master 
+      /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
     volumes:
       - ./spark-apps:/opt/spark-apps
       - ./spark-data:/opt/spark-data
       # - ./spark-metastore:/opt/hive/metastore_db
-      # - pyscripts:/opt/spark/pyscripts      
-      #- work-dir:/usr/src      
+      # - pyscripts:/opt/spark/pyscripts
+      #- work-dir:/usr/src
       - ./notebooks:/usr/src
       # Esta configuracion es solo para mi repo euro-insight
       # donde tengo en una ruta superior los scripts ingest y data
@@ -89,7 +89,7 @@ services:
       - ../data:/opt/project/data
     ports:
       - "8080:8080"   # UI Master
-      - "7077:7077"   # conexión de spark 
+      - "7077:7077"   # conexión de spark
     networks:
       - spark-net
 
@@ -112,18 +112,18 @@ services:
       - SPARK_CONF_spark.hadoop.fs.s3a.path.style.access=true
       - SPARK_CONF_spark.hadoop.fs.s3a.connection.ssl.enabled=false
       - SPARK_CONF_spark.hadoop.fs.s3a.access.key=minioadmin
-      - SPARK_CONF_spark.hadoop.fs.s3a.secret.key=minioadmin123      
+      - SPARK_CONF_spark.hadoop.fs.s3a.secret.key=minioadmin123
       # Catálogo en memoria (opcional: es el default si no hay Hive)
       - SPARK_CONF_spark.sql.catalogImplementation=in-memory
       # (opcional) warehouse en S3A para `saveAsTable` no-hive
-      # - SPARK_CONF_spark.sql.warehouse.dir=s3a://spark/warehouse        
+      # - SPARK_CONF_spark.sql.warehouse.dir=s3a://spark/warehouse
     depends_on:
       - spark-master
     command:   >
       /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     volumes:
       - ./spark-apps:/opt/spark-apps
-      - ./spark-data:/opt/spark-data 
+      - ./spark-data:/opt/spark-data
       # - ./spark-metastore:/opt/hive/metastore_db
       # Esta configuracion es solo para mi repo euro-insight
       # donde tengo en una ruta superior los scripts ingest y data
@@ -146,24 +146,24 @@ services:
       - SPARK_WORKER_PORT=8081
       - SPARK_WORKER_WEBUI_PORT=8081
       - PYSPARK_PYTHON=/usr/bin/python3
-      - PYSPARK_DRIVER_PYTHON=/usr/bin/python3  
+      - PYSPARK_DRIVER_PYTHON=/usr/bin/python3
       # MinIO (S3A)
       - SPARK_CONF_spark.hadoop.fs.s3a.endpoint=http://minio:9000
       - SPARK_CONF_spark.hadoop.fs.s3a.path.style.access=true
       - SPARK_CONF_spark.hadoop.fs.s3a.connection.ssl.enabled=false
       - SPARK_CONF_spark.hadoop.fs.s3a.access.key=minioadmin
-      - SPARK_CONF_spark.hadoop.fs.s3a.secret.key=minioadmin123      
+      - SPARK_CONF_spark.hadoop.fs.s3a.secret.key=minioadmin123
       # Catálogo en memoria (opcional: es el default si no hay Hive)
       - SPARK_CONF_spark.sql.catalogImplementation=in-memory
       # (opcional) warehouse en S3A para `saveAsTable` no-hive
-      # - SPARK_CONF_spark.sql.warehouse.dir=s3a://spark/warehouse            
+      # - SPARK_CONF_spark.sql.warehouse.dir=s3a://spark/warehouse
     depends_on:
       - spark-master
     command:   >
       /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     volumes:
       - ./spark-apps:/opt/spark-apps
-      - ./spark-data:/opt/spark-data    
+      - ./spark-data:/opt/spark-data
       # - ./spark-metastore:/opt/hive/metastore_db
       # Esta configuracion es solo para mi repo euro-insight
       # donde tengo en una ruta superior los scripts ingest y data
@@ -199,8 +199,8 @@ services:
       # mc mb -p local/spark &&
       # mc anonymous set download local/spark &&
       # tail -f /dev/null
-      # "      
-    entrypoint: >   
+      # "
+    entrypoint: >
       /bin/sh -c "
       for i in $$(seq 1 30); do
         mc alias set local http://minio:9000 minioadmin minioadmin123 && break;
@@ -218,7 +218,7 @@ services:
     build:
       context: .
       dockerfile: dockerfile-jupyter
-    image: jupyter-hadoop          
+    image: jupyter-hadoop
     container_name: jupyter-hadoop
     depends_on:
       - spark-master
@@ -226,7 +226,7 @@ services:
       - spark-worker-2
     ports:
       - "8888:8888"
-      - "4040-4050:4040-4050" # necesario para acceder a streaming UI           
+      - "4040-4050:4040-4050" # necesario para acceder a streaming UI
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - SPARK_MASTER=spark-net://spark-master:7077
@@ -242,7 +242,7 @@ services:
     volumes:
       - ./jars-nimio:/usr/spark/jars
       # - ./spark-metastore:/opt/hive/metastore_db
-      - ./notebooks:/home/jovyan/work 
+      - ./notebooks:/home/jovyan/work
 
   kafka:
     image: apache/kafka:4.1.1
@@ -251,6 +251,8 @@ services:
       - "9092:9092"  # interno Docker
       - "9094:9094"  # externo host
     command:
+      # antes
+      # advertised.listeners=PLAINTEXT://kafka:9092,EXTERNAL://192.168.0.12:9094
       - bash
       - -c
       - |
@@ -264,7 +266,7 @@ services:
         log.dirs=/tmp/kraft-combined-logs
 
         listeners=PLAINTEXT://:9092,EXTERNAL://:9094,CONTROLLER://:9093
-        advertised.listeners=PLAINTEXT://kafka:9092,EXTERNAL://192.168.0.12:9094
+        advertised.listeners=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
         listener.security.protocol.map=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
         controller.listener.names=CONTROLLER
         inter.broker.listener.name=PLAINTEXT
@@ -358,9 +360,9 @@ services:
     ports:
       - "1433:1433"
     volumes:
-      - sql_data:/var/opt/mssql      
+      - sql_data:/var/opt/mssql
     networks:
-      - spark-net      
+      - spark-net
     restart: unless-stopped
 
   postgres:
@@ -597,12 +599,12 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
       airflow-init:
-        condition: service_completed_successfully    
+        condition: service_completed_successfully
     networks:
       - spark-net
 
 volumes:
-  # pyscripts: 
+  # pyscripts:
   # work-dir:
   #     name: "notebooks"
   #     driver: local
