@@ -235,3 +235,103 @@ Al finalizar correctamente una ejecución, el pipeline actualiza el registro cor
 | 10   | Insertar registros inválidos en `silver.sorteos_quarantine` |
 | 11   | Actualizar `pipeline_control`                               |
 | 12   | Finalizar ejecución                                         |
+
+
+--------
+
+# Pipeline INE — Bronze → Silver
+
+Ingesta y normalización de datos del INE (población municipal y renta por hogar) hacia PostgreSQL, sobre una stack Spark + MinIO + Airflow + PostgreSQL en Docker.
+
+---
+
+## Fuentes
+
+| Dataset | Ficheros | Separador | Encoding |
+|---|---|---|---|
+| Población municipal | 52 CSVs provinciales en `ine_detalle_municipal_csv/` | `;` | UTF-8 BOM |
+| Atlas de renta por hogar | `ine_atlas_distrib_renta_hogares_csv/30824.csv` | `;` | UTF-8 BOM |
+
+---
+
+## Arquitectura
+
+```
+Fuentes CSV (local)
+       │
+       ▼
+bronze_ine_ingesta.py        →   s3a://bronze/ine_raw  (Delta Lake, particionado por source)
+       │
+       ▼
+silver_ine_transform.py      →   /opt/spark-data/ine_provincias_tmp/part-00000.csv
+       │
+       ▼
+silver_ine_load.py           →   PostgreSQL → provincias_demograficas
+```
+
+---
+
+## Scripts
+
+### `bronze_ine_ingesta.py`
+- Ejecutar con: `spark-submit`
+- Lee los 52 CSVs provinciales y el fichero de renta línea a línea en chunks de **5.000 líneas** para controlar el heap del driver (2 workers × 2 GB).
+- Escribe cada línea como `raw_content` en `bronze.ine_raw` (Delta Lake en MinIO) con los siguientes metadatos de trazabilidad:
+
+| Columna | Descripción |
+|---|---|
+| `raw_content` | Línea original del CSV sin transformar |
+| `source` | `ine_municipal` / `ine_renta_hogares` |
+| `file_name` | Nombre del fichero de origen |
+| `file_md5` | Hash MD5 del fichero completo |
+| `file_encoding` | `utf-8-sig` (UTF-8 con BOM — estándar INE) |
+| `ingestion_ts` | Timestamp UTC de ingesta |
+| `pipeline_run_id` | UUID único por ejecución |
+
+**Resultado:** 736.972 filas (`ine_municipal`) + 3.009.313 filas (`ine_renta_hogares`).
+
+---
+
+### `silver_ine_transform.py`
+- Ejecutar con: `spark-submit`
+- Lee `bronze.ine_raw` desde Delta Lake.
+- Parsea `raw_content` con dos UDFs:
+  - `extract_codigo_provincia` — extrae los 2 primeros dígitos del código INE del campo `Municipios`.
+  - `parse_numeric_es` — normaliza el formato numérico español (punto = miles, coma = decimal).
+- Agrega a nivel provincia tomando siempre el **año más reciente disponible**:
+  - `poblacion_total`: suma de `Total` donde `Sexo = 'Total'`.
+  - `renta_media_hogar`: media de `Total` donde `Indicador = 'Renta neta media por hogar'` y sin desglose por distrito ni sección.
+- Escribe el resultado con `csv` stdlib desde el driver (evita el `FileOutputCommitter` de Spark y los problemas de rename en volúmenes Docker montados). Idempotente: escritura atómica vía rename `part-00000.tmp → part-00000.csv`.
+
+---
+
+### `silver_ine_load.py`
+- Ejecutar con: `python` (contenedor Airflow — tiene `psycopg2`, no tiene PySpark)
+- Lee `part-00000.csv` con `csv` stdlib.
+- Hace upsert en PostgreSQL con `ON CONFLICT (codigo_provincia) DO UPDATE` — idempotente por diseño.
+- Campos cargados: `codigo_provincia`, `poblacion_total`, `renta_media_hogar`.
+- Campos dejados a NULL para otros pipelines: `nombre_provincia`, `densidad_poblacion`, `tasa_paro`, `ccaa`.
+
+**Resultado:** 52 provincias cargadas, `poblacion_espana = 98.228.988`, `renta_media_nacional = 33.147,97 €`.
+
+> ⚠️ La cifra de población (~98M) requiere revisión: puede indicar doble conteo en la fuente. Pendiente de validación en pipeline Silver de calidad.
+
+---
+
+### `dag_silver_ine_provincias.py`
+DAG de Airflow que encadena los dos pasos Silver:
+
+```python
+silver_ine_transform  >>  silver_ine_load
+```
+
+`transform` se lanza con `spark-submit`; `load` con `python` a secas. La dependencia garantiza que `load` no se ejecuta si `transform` ha fallado.
+
+---
+
+## Decisiones técnicas relevantes
+
+- **Bronze almacena raw_content sin parsear**: el separador, el formato numérico y la estructura de columnas quedan diferidos a Silver, siguiendo el principio de fidelidad de la capa Bronze.
+- **Encoding hardcodeado a `utf-8-sig`**: los CSVs del INE se publican en UTF-8 con BOM. Python gestiona el BOM automáticamente con este alias, sin dependencias externas.
+- **Sin pandas en la stack Spark**: toda la lógica de transformación usa PySpark puro. La escritura del CSV intermedio usa `csv` stdlib desde el driver para evitar conflictos de permisos entre contenedores Docker.
+- **Separación transform / load**: necesaria porque el contenedor Airflow tiene una versión de PySpark incompatible con el cluster Spark. `transform` corre en el spark-master vía `spark-submit`; `load` corre en Airflow con Python local.
